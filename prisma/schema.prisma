@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  passwordHash  String
+  avatar        String?
+  nickname      String?
+
+  friendshipsSent     Friendship[] @relation("SenderFriendships")
+  friendshipsReceived Friendship[] @relation("RecipientFriendships")
+  rooms               RoomParticipant[]
+  messages            Message[]
+  status              UserStatus?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Friendship {
+  id          String   @id @default(uuid())
+  senderId    String
+  recipientId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sender      User     @relation("SenderFriendships", fields: [senderId], references: [id])
+  recipient   User     @relation("RecipientFriendships", fields: [recipientId], references: [id])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Room {
+  id            String          @id @default(uuid())
+  name          String?         
+  isGroup       Boolean         @default(false)
+  participants  RoomParticipant[]
+  messages      Message[]
+  lastActivity  DateTime?       @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model RoomParticipant {
+  id        String   @id @default(uuid())
+  userId    String
+  roomId    String
+
+  user      User     @relation(fields: [userId], references: [id])
+  room      Room     @relation(fields: [roomId], references: [id])
+}
+
+model Message {
+  id         String     @id @default(uuid())
+  roomId     String
+  senderId   String
+  type       MessageType @default(TEXT)
+  content    String
+  editedAt   DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  room       Room        @relation(fields: [roomId], references: [id])
+  sender     User        @relation(fields: [senderId], references: [id])
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
+
+model UserStatus {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  isOnline    Boolean   @default(false)
+  lastActive  DateTime?
+
+  user        User      @relation(fields: [userId], references: [id])
+}
