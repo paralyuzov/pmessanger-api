@@ -44,4 +44,9 @@ export class FriendshipController {
   async getFriends(@GetUser() user: User) {
     return await this.friendshipService.getFriends(user.id);
   }
+
+  @Get('pending-requests')
+  async getPendingFriendRequests(@GetUser() user: User) {
+    return await this.friendshipService.getPendingFriendRequests(user.id);
+  }
 }

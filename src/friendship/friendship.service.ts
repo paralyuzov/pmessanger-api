@@ -6,6 +6,7 @@ export class FriendshipService {
   constructor(private readonly prisma: PrismaService) {}
 
   async sendFriendRequest(userId: string, friendId: string) {
+    console.log('Sending friend request from', userId, 'to', friendId);
     return this.prisma.friendship.create({
       data: {
         senderId: userId,
@@ -75,5 +76,51 @@ export class FriendshipService {
       }
     });
     return mapped;
+  }
+
+  getFriendRequestById(friendshipId: string) {
+    return this.prisma.friendship.findUnique({
+      where: { id: friendshipId },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            status: true,
+          },
+        },
+        recipient: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            status: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getPendingFriendRequests(userId: string) {
+    return await this.prisma.friendship.findMany({
+      where: {
+        recipientId: userId,
+        status: 'PENDING',
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            status: true,
+          },
+        },
+      },
+    });
   }
 }
