@@ -8,6 +8,7 @@ export class RoomsService {
   async createRoom(userId: string, friendId: string, name?: string) {
     const existingRoom = await this.isRoomExisting(userId, friendId);
     if (existingRoom) {
+      console.log('Room already exists between', userId, 'and', friendId);
       return existingRoom;
     }
     return this.prisma.room.create({
@@ -53,13 +54,11 @@ export class RoomsService {
   private async isRoomExisting(userId: string, friendId: string) {
     const room = await this.prisma.room.findFirst({
       where: {
-        participants: {
-          some: {
-            userId: {
-              in: [userId, friendId],
-            },
-          },
-        },
+        isGroup: false,
+        AND: [
+          { participants: { some: { userId: userId } } },
+          { participants: { some: { userId: friendId } } },
+        ],
       },
     });
     return room;
