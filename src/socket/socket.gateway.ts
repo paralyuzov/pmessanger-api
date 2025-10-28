@@ -27,7 +27,6 @@ export class SocketGateway
   afterInit(server: Server) {
     server.use((socket: Socket, next) => {
       this.socketService.authenticateSocket(socket, next);
-      next();
     });
   }
   async handleConnection(client: Socket) {
@@ -44,7 +43,7 @@ export class SocketGateway
   ) {
     const room = await this.socketService.joinRoom(client, friendId);
     await client.join(room.id);
-    console.log(`Client ${client.id} joined room ${room.id}`);
+    this.server.to(client.id).emit('joinedRoom', room);
   }
 
   @SubscribeMessage('loadMessages')
@@ -67,7 +66,6 @@ export class SocketGateway
       data.content,
       client,
     );
-    console.log(message);
     this.server.to(data.room).emit('receivedMessage', message);
   }
 
@@ -81,5 +79,47 @@ export class SocketGateway
       data.oldestMessageId,
     );
     this.server.to(client.id).emit('olderMessagesLoaded', olderMessages);
+  }
+
+  @SubscribeMessage('sendFriendRequest')
+  async handleSendFriendRequest(@MessageBody() friendshipId: string) {
+    const friendshipData =
+      await this.socketService.notifyFriendRequest(friendshipId);
+    if (friendshipData) {
+      console.log(friendshipData);
+      this.server
+        .to(friendshipData.recipientSocketId)
+        .emit('newFriendRequest', friendshipData.friendship);
+      console.log(
+        `Notified socket ${friendshipData.recipientSocketId} of new friend request ${friendshipId}`,
+      );
+    }
+  }
+  @SubscribeMessage('acceptFriendRequest')
+  async handleAcceptFriendRequest(@MessageBody() friendshipId: string) {
+    const friendshipData =
+      await this.socketService.notifyFriendAcceptance(friendshipId);
+    if (friendshipData) {
+      this.server
+        .to(friendshipData.senderSocketId)
+        .emit('friendRequestAccepted', friendshipData.friendship);
+      console.log(
+        `Notified socket ${friendshipData.senderSocketId} of accepted friend request ${friendshipId}`,
+      );
+    }
+  }
+
+  @SubscribeMessage('rejectFriendRequest')
+  async handleRejectFriendRequest(@MessageBody() friendshipId: string) {
+    const friendshipData =
+      await this.socketService.notifyFriendRejection(friendshipId);
+    if (friendshipData) {
+      this.server
+        .to(friendshipData.senderSocketId)
+        .emit('friendRequestRejected', friendshipData.friendship);
+      console.log(
+        `Notified socket ${friendshipData.senderSocketId} of rejected friend request ${friendshipId}`,
+      );
+    }
   }
 }

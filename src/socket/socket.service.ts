@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { MessageType } from '@prisma/client';
 import { Socket } from 'socket.io';
 import { JwtPayload } from 'src/auth/strategy/jwt.strategy';
+import { FriendshipService } from 'src/friendship/friendship.service';
 import { MessagesService } from 'src/messages/messages.service';
 import { RoomsService } from 'src/rooms/rooms.service';
 import { UserService } from 'src/user/user.service';
@@ -24,19 +25,21 @@ export class SocketService {
     private readonly roomsService: RoomsService,
     private readonly messagesService: MessagesService,
     private readonly userService: UserService,
+    private readonly friendshipService: FriendshipService,
   ) {}
 
   authenticateSocket(socket: SocketWithAuth, next: (err?: any) => void) {
     console.log('Authenticating socket:', socket.handshake.auth);
     const token = socket.handshake.auth?.token as string;
     if (!token) {
-      return socket.disconnect(true);
+      return socket.disconnect();
     }
 
     try {
       const payload = this.jwtService.verify<JwtPayload>(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
+      next();
       socket.data.userId = payload.sub;
     } catch (err) {
       console.log('Socket authentication failed:', err);
@@ -88,5 +91,32 @@ export class SocketService {
 
   async getOlderMessages(roomId: string, beforeMessageId?: string) {
     return await this.messagesService.getOlderMessages(roomId, beforeMessageId);
+  }
+
+  async notifyFriendRequest(friendshipId: string) {
+    const friendship =
+      await this.friendshipService.getFriendRequestById(friendshipId);
+    if (friendship) {
+      const recipientSocketId = this.onlineUsers.get(friendship.recipientId)!;
+      return { recipientSocketId, friendship };
+    }
+  }
+
+  async notifyFriendAcceptance(friendshipId: string) {
+    const friendship =
+      await this.friendshipService.getFriendRequestById(friendshipId);
+    if (friendship) {
+      const senderSocketId = this.onlineUsers.get(friendship.senderId)!;
+      return { senderSocketId, friendship };
+    }
+  }
+
+  async notifyFriendRejection(friendshipId: string) {
+    const friendship =
+      await this.friendshipService.getFriendRequestById(friendshipId);
+    if (friendship) {
+      const senderSocketId = this.onlineUsers.get(friendship.senderId)!;
+      return { senderSocketId, friendship };
+    }
   }
 }
