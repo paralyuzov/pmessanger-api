@@ -5,16 +5,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async searchUser(name: string, excludeUserId: string) {
+  async searchUser(name: string, currentUserId: string) {
     const users = await this.prisma.user.findMany({
       where: {
         name: {
           contains: name,
           mode: 'insensitive',
         },
-        id: {
-          not: excludeUserId,
-        },
+        id: { not: currentUserId },
       },
       select: {
         id: true,
@@ -22,11 +20,31 @@ export class UserService {
         email: true,
         avatar: true,
         status: true,
-        friendshipsReceived: { select: { status: true } },
-        friendshipsSent: { select: { status: true } },
+        friendshipsSent: {
+          where: { recipientId: currentUserId },
+          select: { status: true },
+        },
+        friendshipsReceived: {
+          where: { senderId: currentUserId },
+          select: { status: true },
+        },
       },
     });
-    return users;
+
+    return users.map((user) => {
+      const sent = user.friendshipsReceived[0]?.status;
+      const received = user.friendshipsSent[0]?.status;
+      const friendshipStatus = sent || received || 'NONE';
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        status: user.status,
+        friendshipStatus,
+      };
+    });
   }
 
   async updateUserStatusOnLogin(userId: string) {
