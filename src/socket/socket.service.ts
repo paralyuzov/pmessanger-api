@@ -32,7 +32,7 @@ export class SocketService {
     console.log('Authenticating socket:', socket.handshake.auth);
     const token = socket.handshake.auth?.token as string;
     if (!token) {
-      return socket.disconnect();
+      return next(new Error('Authentication error'));
     }
 
     try {
@@ -63,16 +63,29 @@ export class SocketService {
     console.log(`Socket disconnected: ${socket.id}`);
   }
 
-  async joinRoom(client: SocketWithAuth, friendId: string) {
-    const room = await this.roomsService.createRoom(
-      client.data.userId,
-      friendId,
-    );
-    return room;
-  }
-
   async loadMessages(roomId: string) {
     return await this.messagesService.getRoomMessages(roomId);
+  }
+
+  async joinRoom(roomId: string, client: SocketWithAuth) {
+    const room = await this.roomsService.isRoomExisting(roomId);
+    if (!room) {
+      throw new Error('Room not found');
+    }
+    const friendId = await this.roomsService.getFriendInRoom(
+      roomId,
+      client.data.userId,
+    );
+    if (!friendId) {
+      throw new Error('Friend not found in room');
+    }
+
+    const friendSocketId = this.onlineUsers.get(friendId.id);
+    await this.messagesService.markRoomAsRead(roomId, client.data.userId);
+    return {
+      room,
+      friendSocketId,
+    };
   }
 
   async sendMessage(
@@ -81,12 +94,28 @@ export class SocketService {
     content: string,
     client: SocketWithAuth,
   ) {
-    return await this.messagesService.createMessage(
+    const message = await this.messagesService.createMessage(
       roomId,
       type,
       content,
       client.data.userId,
     );
+
+    const friendId = await this.roomsService.getFriendInRoom(
+      roomId,
+      client.data.userId,
+    );
+
+    if (!friendId) {
+      throw new Error('Friend not found in room');
+    }
+
+    const friendSocketId = this.onlineUsers.get(friendId.id);
+
+    return {
+      message,
+      friendSocketId,
+    };
   }
 
   async getOlderMessages(roomId: string, beforeMessageId?: string) {

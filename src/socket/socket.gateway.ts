@@ -38,12 +38,17 @@ export class SocketGateway
 
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
-    @MessageBody() friendId: string,
+    @MessageBody() roomId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    const room = await this.socketService.joinRoom(client, friendId);
+    const { room, friendSocketId } = await this.socketService.joinRoom(
+      roomId,
+      client,
+    );
     await client.join(room.id);
-    this.server.to(client.id).emit('joinedRoom', room);
+    console.log(`Client ${client.id} joined room ${room.id}`);
+    this.server.to(client.id).emit('joinedRoom', room.id);
+    this.server.to(friendSocketId!).emit('friendJoinedRoom', room.id);
   }
 
   @SubscribeMessage('loadMessages')
@@ -60,13 +65,16 @@ export class SocketGateway
     @MessageBody() data: { room: string; type: MessageType; content: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const message = await this.socketService.sendMessage(
+    const { message, friendSocketId } = await this.socketService.sendMessage(
       data.room,
       data.type,
       data.content,
       client,
     );
     this.server.to(data.room).emit('receivedMessage', message);
+    this.server.to(friendSocketId!).emit('newMessageNotification', {
+      roomId: data.room,
+    });
   }
 
   @SubscribeMessage('loadOlderMessages')
