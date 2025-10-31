@@ -10,7 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { SocketService } from './socket.service';
 import { Server, Socket } from 'socket.io';
-import { MessageType } from '@prisma/client';
+import { Message, MessageType } from '@prisma/client';
 
 @WebSocketGateway({
   cors: {
@@ -71,6 +71,7 @@ export class SocketGateway
       data.content,
       client,
     );
+    console.log(`Client ${client.id} sent message to room ${data.room}`);
     this.server.to(data.room).emit('receivedMessage', message);
     this.server.to(friendSocketId!).emit('newMessageNotification', {
       roomId: data.room,
@@ -129,5 +130,24 @@ export class SocketGateway
         `Notified socket ${friendshipData.senderSocketId} of rejected friend request ${friendshipId}`,
       );
     }
+  }
+
+  @SubscribeMessage('leaveRoom')
+  async handleLeaveRoom(
+    @MessageBody() roomId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.socketService.leaveRoom(roomId, client);
+    await client.leave(roomId);
+    console.log(`Client ${client.id} left room ${roomId}`);
+  }
+
+  @SubscribeMessage('markMessagesAsRead')
+  async handleMarkMessagesAsRead(
+    @MessageBody() message: Message,
+    @ConnectedSocket() client: Socket,
+  ) {
+    console.log('Marking messages as read for message:');
+    await this.socketService.markMessagesAsRead(message, client);
   }
 }
