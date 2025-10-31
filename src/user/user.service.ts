@@ -48,6 +48,12 @@ export class UserService {
   }
 
   async updateUserStatusOnLogin(userId: string) {
+    console.log('Updating user status on login for userId:', userId);
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
     const existingStatus = await this.prisma.userStatus.findUnique({
       where: { userId: userId },
     });
