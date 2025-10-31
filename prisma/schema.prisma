@@ -14,33 +14,33 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(uuid())
-  name          String
-  email         String        @unique
-  passwordHash  String
-  avatar        String?
-  nickname      String?
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  passwordHash String
+  avatar       String?
+  nickname     String?
 
-  friendshipsSent     Friendship[] @relation("SenderFriendships")
-  friendshipsReceived Friendship[] @relation("RecipientFriendships")
+  friendshipsSent     Friendship[]      @relation("SenderFriendships")
+  friendshipsReceived Friendship[]      @relation("RecipientFriendships")
   rooms               RoomParticipant[]
   messages            Message[]
   status              UserStatus?
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Friendship {
-  id          String   @id @default(uuid())
+  id          String           @id @default(uuid())
   senderId    String
   recipientId String
   status      FriendshipStatus @default(PENDING)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
-  sender      User     @relation("SenderFriendships", fields: [senderId], references: [id])
-  recipient   User     @relation("RecipientFriendships", fields: [recipientId], references: [id])
+  sender    User @relation("SenderFriendships", fields: [senderId], references: [id])
+  recipient User @relation("RecipientFriendships", fields: [recipientId], references: [id])
 }
 
 enum FriendshipStatus {
@@ -50,37 +50,42 @@ enum FriendshipStatus {
 }
 
 model Room {
-  id            String          @id @default(uuid())
-  name          String?         
-  isGroup       Boolean         @default(false)
-  participants  RoomParticipant[]
-  messages      Message[]
-  lastActivity  DateTime?       @default(now())
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id           String            @id @default(uuid())
+  name         String?
+  isGroup      Boolean           @default(false)
+  participants RoomParticipant[]
+  messages     Message[]
+  lastActivity DateTime?         @default(now())
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 }
 
 model RoomParticipant {
-  id        String   @id @default(uuid())
-  userId    String
-  roomId    String
+  id          String    @id @default(uuid())
+  userId      String
+  roomId      String
+  lastReadAt  DateTime? @default(now())
+  unreadCount Int       @default(0)
 
-  user      User     @relation(fields: [userId], references: [id])
-  room      Room     @relation(fields: [roomId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  room Room @relation(fields: [roomId], references: [id])
+
+  @@index([userId, unreadCount])
+  @@index([roomId, userId])
 }
 
 model Message {
-  id         String     @id @default(uuid())
-  roomId     String
-  senderId   String
-  type       MessageType @default(TEXT)
-  content    String
-  editedAt   DateTime?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id        String      @id @default(uuid())
+  roomId    String
+  senderId  String
+  type      MessageType @default(TEXT)
+  content   String
+  editedAt  DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  room       Room        @relation(fields: [roomId], references: [id])
-  sender     User        @relation(fields: [senderId], references: [id])
+  room   Room @relation(fields: [roomId], references: [id])
+  sender User @relation(fields: [senderId], references: [id])
 }
 
 enum MessageType {
@@ -92,10 +97,10 @@ enum MessageType {
 }
 
 model UserStatus {
-  id          String    @id @default(uuid())
-  userId      String    @unique
-  isOnline    Boolean   @default(false)
-  lastActive  DateTime?
+  id         String    @id @default(uuid())
+  userId     String    @unique
+  isOnline   Boolean   @default(false)
+  lastActive DateTime?
 
-  user        User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
