@@ -6,9 +6,29 @@ export class RoomsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createRoom(userId: string, friendId: string, name?: string) {
-    const existingRoom = await this.isRoomExisting(userId, friendId);
+    console.log('Creating room between', userId, 'and', friendId);
+    const existingRoom = await this.prisma.room.findFirst({
+      where: {
+        isGroup: false,
+        AND: [
+          {
+            participants: {
+              some: { userId: userId },
+            },
+          },
+          {
+            participants: {
+              some: { userId: friendId },
+            },
+          },
+        ],
+      },
+      include: {
+        participants: true,
+      },
+    });
+
     if (existingRoom) {
-      console.log('Room already exists between', userId, 'and', friendId);
       return existingRoom;
     }
     return this.prisma.room.create({
@@ -51,16 +71,39 @@ export class RoomsService {
     return mappedRooms;
   }
 
-  private async isRoomExisting(userId: string, friendId: string) {
-    const room = await this.prisma.room.findFirst({
-      where: {
-        isGroup: false,
-        AND: [
-          { participants: { some: { userId: userId } } },
-          { participants: { some: { userId: friendId } } },
-        ],
+  async isRoomExisting(roomId: string) {
+    return this.prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        participants: {
+          include: { user: true },
+        },
       },
     });
-    return room;
+  }
+
+  async getFriendInRoom(roomId: string, userId: string) {
+    const room = await this.prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        participants: true,
+      },
+    });
+
+    if (!room) {
+      throw new Error('Room not found');
+    }
+
+    const friendParticipant = room.participants.find(
+      (p) => p.userId !== userId,
+    );
+
+    if (!friendParticipant) {
+      throw new Error('Friend not found in room');
+    }
+
+    return this.prisma.user.findUnique({
+      where: { id: friendParticipant.userId },
+    });
   }
 }
