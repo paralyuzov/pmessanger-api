@@ -125,8 +125,8 @@ export class SocketService {
     };
   }
 
-  async getOlderMessages(roomId: string, beforeMessageId?: string) {
-    return await this.messagesService.getOlderMessages(roomId, beforeMessageId);
+  async getOlderMessages(room: string, oldestMessageId: string) {
+    return await this.messagesService.getOlderMessages(room, oldestMessageId);
   }
 
   async notifyFriendRequest(friendshipId: string) {

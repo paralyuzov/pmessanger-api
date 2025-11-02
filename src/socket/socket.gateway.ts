@@ -80,11 +80,11 @@ export class SocketGateway
 
   @SubscribeMessage('loadOlderMessages')
   async handleLoadOlderMessages(
-    @MessageBody() data: { roomId: string; oldestMessageId?: string },
+    @MessageBody() data: { room: string; oldestMessageId: string },
     @ConnectedSocket() client: Socket,
   ) {
     const olderMessages = await this.socketService.getOlderMessages(
-      data.roomId,
+      data.room,
       data.oldestMessageId,
     );
     this.server.to(client.id).emit('olderMessagesLoaded', olderMessages);
