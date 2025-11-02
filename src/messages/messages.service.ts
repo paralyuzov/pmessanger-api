@@ -66,9 +66,8 @@ export class MessagesService {
     return messages.reverse();
   }
 
-  async getOlderMessages(roomId: string, beforeMessageId?: string) {
+  async getOlderMessages(roomId: string, beforeMessageId: string) {
     let createdAtCursor: Date | undefined;
-
     if (beforeMessageId) {
       const beforeMessage = await this.prisma.message.findUnique({
         where: { id: beforeMessageId },
