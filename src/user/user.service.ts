@@ -80,4 +80,23 @@ export class UserService {
       data: { isOnline: false, lastActive: new Date() },
     });
   }
+
+  async getUserById(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        status: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
 }
