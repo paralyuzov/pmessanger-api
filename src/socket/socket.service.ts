@@ -174,4 +174,19 @@ export class SocketService {
       client.data.userId,
     );
   }
+
+  async handleUserTyping(roomId: string, client: SocketWithAuth) {
+    console.log(client.data.userId);
+    const friend = await this.roomsService.getFriendInRoom(
+      roomId,
+      client.data.userId,
+    );
+    if (!friend) {
+      return;
+    }
+    const friendSocketId = this.onlineUsers.get(friend.id);
+    if (friendSocketId) {
+      return await this.userService.getUserById(client.data.userId);
+    }
+  }
 }

@@ -150,4 +150,16 @@ export class SocketGateway
     console.log('Marking messages as read for message:');
     await this.socketService.markMessagesAsRead(message, client);
   }
+
+  @SubscribeMessage('userTyping')
+  async handleUserTyping(
+    @MessageBody() roomId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
+    console.log(roomId, 'typing event from client', client.id);
+    const friend = await this.socketService.handleUserTyping(roomId, client);
+    if (friend) {
+      this.server.to(roomId).emit('userIsTyping', friend);
+    }
+  }
 }
