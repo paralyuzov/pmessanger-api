@@ -104,6 +104,13 @@ export class RoomsService {
 
     return this.prisma.user.findUnique({
       where: { id: friendParticipant.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        status: true,
+      },
     });
   }
 }
