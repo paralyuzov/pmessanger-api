@@ -50,14 +50,16 @@ enum FriendshipStatus {
 }
 
 model Room {
-  id           String            @id @default(uuid())
-  name         String?
-  isGroup      Boolean           @default(false)
-  participants RoomParticipant[]
-  messages     Message[]
-  lastActivity DateTime?         @default(now())
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id            String            @id @default(uuid())
+  name          String?
+  isGroup       Boolean           @default(false)
+  participants  RoomParticipant[]
+  messages      Message[]
+  lastMessageId String?           @unique
+  lastMessage   Message?          @relation("RoomLastMessage", fields: [lastMessageId], references: [id])
+  lastActivity  DateTime?         @default(now())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 }
 
 model RoomParticipant {
@@ -84,8 +86,9 @@ model Message {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  room   Room @relation(fields: [roomId], references: [id])
-  sender User @relation(fields: [senderId], references: [id])
+  room             Room  @relation(fields: [roomId], references: [id])
+  sender           User  @relation(fields: [senderId], references: [id])
+  roomAsLastMessage Room? @relation("RoomLastMessage")
 }
 
 enum MessageType {
