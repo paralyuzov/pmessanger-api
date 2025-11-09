@@ -1,12 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
+type RoomParticipant = {
+  id: string;
+  userId: string;
+  roomId: string;
+  lastReadAt: Date | null;
+  unreadCount: number;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatar: string | null;
+    status: {
+      id: string;
+      userId: string;
+      isOnline: boolean;
+      lastActive: Date | null;
+    } | null;
+  };
+};
+
 @Injectable()
 export class RoomsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createRoom(userId: string, friendId: string, name?: string) {
-    console.log('Creating room between', userId, 'and', friendId);
     const existingRoom = await this.prisma.room.findFirst({
       where: {
         isGroup: false,
@@ -24,6 +43,17 @@ export class RoomsService {
         ],
       },
       include: {
+        lastMessage: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+          },
+        },
         participants: true,
       },
     });
@@ -43,6 +73,17 @@ export class RoomsService {
         },
       },
       include: {
+        lastMessage: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+          },
+        },
         participants: {
           include: { user: true },
         },
@@ -58,23 +99,64 @@ export class RoomsService {
         },
       },
       include: {
-        participants: {
-          include: { user: true },
+        lastMessage: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+          },
         },
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        lastActivity: 'desc',
       },
     });
 
-    const mappedRooms = rooms.map((room) => ({
-      ...room,
-      participants: room.participants.filter((p) => p.userId !== userId),
-    }));
-    return mappedRooms;
+    return rooms.map((room) => {
+      const participants = room.participants as RoomParticipant[];
+      const filteredParticipants = participants.filter(
+        (participant) => participant.userId !== userId,
+      );
+
+      return {
+        ...room,
+        participants: filteredParticipants,
+      };
+    });
   }
 
   async isRoomExisting(roomId: string) {
     return this.prisma.room.findUnique({
       where: { id: roomId },
       include: {
+        lastMessage: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+          },
+        },
         participants: {
           include: { user: true },
         },
