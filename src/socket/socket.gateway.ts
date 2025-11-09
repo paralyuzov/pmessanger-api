@@ -30,10 +30,12 @@ export class SocketGateway
     });
   }
   async handleConnection(client: Socket) {
-    await this.socketService.handleConnection(client);
+    const userId = await this.socketService.handleConnection(client);
+    this.server.emit('userOnline', userId);
   }
   async handleDisconnect(client: Socket) {
-    await this.socketService.handleDisconnect(client);
+    const userId = await this.socketService.handleDisconnect(client);
+    this.server.emit('userOffline', userId);
   }
 
   @SubscribeMessage('joinRoom')

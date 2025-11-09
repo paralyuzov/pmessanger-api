@@ -53,15 +53,14 @@ export class SocketService {
     const socketId = socket.id;
     this.onlineUsers.set(userId, socketId);
     await this.userService.updateUserStatusOnLogin(userId);
-    console.log(`Socket connected: ${socket.id}`);
-    console.log(`Authenticated user ID: ${socket.data.userId}`);
+    return userId;
   }
 
   async handleDisconnect(socket: SocketWithAuth) {
     const userId = socket.data.userId;
     this.onlineUsers.delete(userId);
     await this.userService.updateUserStatusOnLogout(userId);
-    console.log(`Socket disconnected: ${socket.id}`);
+    return userId;
   }
 
   async loadMessages(roomId: string) {
