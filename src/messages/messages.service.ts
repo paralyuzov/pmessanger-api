@@ -32,7 +32,10 @@ export class MessagesService {
 
     await this.prisma.room.update({
       where: { id: roomId },
-      data: { lastActivity: message.createdAt },
+      data: {
+        lastMessageId: message.id,
+        lastActivity: message.createdAt,
+      },
     });
 
     await this.prisma.roomParticipant.updateMany({
